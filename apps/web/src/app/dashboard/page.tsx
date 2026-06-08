@@ -131,23 +131,6 @@ export default function DashboardPage() {
 
   // ── Download + decrypt ────────────────────────────────────────────────────
 
-  type DownloadStep =
-    | 'checking-access'
-    | 'fetching-metadata'
-    | 'downloading'
-    | 'decrypting'
-    | 'saving'
-    | 'completed';
-
-  const DOWNLOAD_LABELS: Record<DownloadStep, string> = {
-    'checking-access': 'Checking access...',
-    'fetching-metadata': 'Fetching metadata...',
-    downloading: 'Downloading from Shelby...',
-    decrypting: 'Decrypting...',
-    saving: 'Saving file...',
-    completed: 'Completed',
-  };
-
   async function downloadFile(f: FileRow) {
     if (!connected || !account) {
       setError('Connect wallet first');
