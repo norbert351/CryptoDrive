@@ -15,6 +15,7 @@
     "@aptos-labs/ts-sdk": "^5.2.1",
     "@aptos-labs/wallet-adapter-ant-design": "^5.3.19",
     "@aptos-labs/wallet-adapter-react": "^8.3.2",
+    "@microsoft/clarity": "^1.0.2",
     "@shelby-protocol/sdk": "^0.2.4",
     "clsx": "^2.1.1",
     "framer-motion": "^12.38.0",

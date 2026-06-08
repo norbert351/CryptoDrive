@@ -15,8 +15,8 @@ import {
   Video,
   XCircle,
 } from 'lucide-react';
-import { trackEvent } from '@/lib/analytics';
-import { trackClarityEvent } from '@/lib/clarity';
+import { trackEvent as gaEvent } from '@/lib/analytics';
+import { trackEvent } from '@/lib/analytics/clarity';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { fetchSharedFiles, type SharedFile } from '@/lib/api';
 
@@ -131,8 +131,8 @@ function SharedContent() {
   useEffect(() => {
     let active = true;
 
-    trackEvent('shared_file_opened');
-    trackClarityEvent('shared_file_opened');
+    gaEvent('shared_file_opened');
+    trackEvent('shared_view');
 
     async function loadSharedFiles() {
       setLoading(true);

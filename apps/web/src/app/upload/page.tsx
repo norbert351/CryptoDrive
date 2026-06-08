@@ -8,7 +8,7 @@ import { useWallet } from '@aptos-labs/wallet-adapter-react';
 import { apiFetch, getAccessToken, setAccessToken } from '@/lib/api';
 import { loginWithWallet } from '@/lib/auth-wallet';
 import { trackUpload } from '@/lib/analytics';
-import { trackClarityEvent } from '@/lib/clarity';
+import { trackEvent, setTag, upgradeSession } from '@/lib/analytics/clarity';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import {
   deriveWrapKeyFromWallet,
@@ -137,11 +137,21 @@ function UploadContent() {
       return;
     }
 
-    trackClarityEvent('upload_started');
+    trackEvent('upload_started');
     setMessage(null);
     setPhaseDetail('Checking wallet session.');
     setPhase('auth');
     setProgress(5);
+
+    const ext = file.name.split('.').pop()?.toLowerCase() ?? 'unknown';
+    setTag('file_type', ext);
+
+    const sizeBucket = file.size < 1024 ? '<1kb' : file.size < 102400 ? '1kb-100kb' : file.size < 1048576 ? '100kb-1mb' : file.size < 10485760 ? '1mb-10mb' : file.size < 104857600 ? '10mb-100mb' : '>100mb';
+    setTag('file_size', sizeBucket);
+
+    if (file.size > 104857600) {
+      upgradeSession('large_upload');
+    }
 
     try {
       let token = getAccessToken();
@@ -259,7 +269,7 @@ function UploadContent() {
 
       if (file) {
         trackUpload(file.name, file.size);
-        trackClarityEvent('upload_completed');
+        trackEvent('upload_completed');
       }
       setProgress(100);
       setPhase('done');
@@ -275,6 +285,8 @@ function UploadContent() {
           : 'Upload failed before completion.',
       );
       setMessage(errorMessage);
+      trackEvent('upload_failed');
+      upgradeSession('upload_error');
     }
   };
 

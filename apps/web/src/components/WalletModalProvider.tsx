@@ -14,7 +14,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { Network } from '@aptos-labs/ts-sdk';
 import { useWallet } from '@aptos-labs/wallet-adapter-react';
 import { trackWalletConnect, identifyUser as gaIdentifyUser } from '@/lib/analytics';
-import { identifyUser as clarityIdentifyUser, trackClarityEvent } from '@/lib/clarity';
+import { identifyUser, trackEvent } from '@/lib/analytics/clarity';
 import { WalletModal } from './WalletModal';
 
 type OpenWalletOptions = {
@@ -42,10 +42,10 @@ export function WalletModalProvider({ children }: PropsWithChildren) {
       const address = account.address.toString();
       trackWalletConnect(address);
       gaIdentifyUser(address);
-      clarityIdentifyUser(address);
-      trackClarityEvent('wallet_connected');
+      identifyUser({ id: address });
+      trackEvent('wallet_connected');
     } else if (!connected && wasConnected.current) {
-      trackClarityEvent('wallet_disconnected');
+      trackEvent('wallet_disconnected');
     }
     wasConnected.current = connected;
   }, [connected, account]);

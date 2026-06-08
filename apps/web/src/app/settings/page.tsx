@@ -16,8 +16,8 @@ import {
   Wallet,
 } from 'lucide-react';
 import { useEffect } from 'react';
-import { trackEvent } from '@/lib/analytics';
-import { trackClarityEvent } from '@/lib/clarity';
+import { trackEvent as gaEvent } from '@/lib/analytics';
+import { trackEvent } from '@/lib/analytics/clarity';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { useWalletModal } from '@/components/WalletModalProvider';
 import { cn } from '@/lib/utils';
@@ -96,8 +96,8 @@ function SettingsContent() {
   const isTestnet = network?.name === Network.TESTNET;
 
   useEffect(() => {
-    trackEvent('settings_opened');
-    trackClarityEvent('settings_opened');
+    gaEvent('settings_opened');
+    trackEvent('settings_view');
   }, []);
 
   return (

@@ -2,6 +2,7 @@
 
 import { Hex } from '@aptos-labs/ts-sdk';
 import type { useWallet } from '@aptos-labs/wallet-adapter-react';
+import { trackEvent, upgradeSession } from '@/lib/analytics/clarity';
 
 type Wallet = ReturnType<typeof useWallet>;
 
@@ -16,7 +17,11 @@ export async function loginWithWallet(
   if (!account) throw new Error('Connect wallet first');
 
   const chRes = await fetch(`${apiUrl}/auth/challenge`);
-  if (!chRes.ok) throw new Error('challenge failed');
+  if (!chRes.ok) {
+    upgradeSession('auth_error');
+    throw new Error('challenge failed');
+  }
+  trackEvent('auth_challenge_requested');
   const { nonce } = (await chRes.json()) as { nonce: string };
 
   const message = `CryptoDrive login\nnonce:${nonce}`;
@@ -46,8 +51,10 @@ export async function loginWithWallet(
   });
   if (!verifyRes.ok) {
     const t = await verifyRes.text();
+    upgradeSession('auth_error');
     throw new Error(t || 'verify failed');
   }
+  trackEvent('auth_success');
   const { accessToken } = (await verifyRes.json()) as { accessToken: string };
   return accessToken;
 }

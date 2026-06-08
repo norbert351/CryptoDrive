@@ -13,8 +13,8 @@ import {
   clearWrapKeyCache,
 } from '@/lib/crypto';
 
-import { trackDownload, trackEvent } from '@/lib/analytics';
-import { trackClarityEvent } from '@/lib/clarity';
+import { trackDownload, trackEvent as gaEvent } from '@/lib/analytics';
+import { trackEvent, upgradeSession } from '@/lib/analytics/clarity';
 import { EmptyState } from '@/components/EmptyState';
 import { DashboardStats } from '@/components/DashboardStats';
 import { FileGrid } from '@/components/FileGrid';
@@ -40,8 +40,8 @@ export default function DashboardPage() {
   const { connected, account } = wallet;
 
   useEffect(() => {
-    trackEvent('dashboard_opened');
-    trackClarityEvent('dashboard_opened');
+    gaEvent('dashboard_opened');
+    trackEvent('dashboard_view');
   }, []);
 
   const [files, setFiles] = useState<FileRow[] | null>(null);
@@ -138,7 +138,7 @@ export default function DashboardPage() {
     }
 
     trackDownload(f.filename);
-    trackClarityEvent('download_started');
+    trackEvent('download_started');
 
     setDownloading(f.id);
     setDownloadProgress('checking-access');
@@ -192,7 +192,7 @@ export default function DashboardPage() {
       a.remove();
       URL.revokeObjectURL(url);
 
-      trackClarityEvent('download_completed');
+      trackEvent('download_completed');
       setDownloadProgress('completed');
       setTimeout(() => {
         setDownloadProgress(null);
@@ -203,6 +203,8 @@ export default function DashboardPage() {
       setError(msg);
       setDownloading(null);
       setDownloadProgress(null);
+      trackEvent('download_failed');
+      upgradeSession('download_error');
     }
   }
 
