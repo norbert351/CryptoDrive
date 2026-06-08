@@ -6,12 +6,15 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type PropsWithChildren,
 } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { Network } from '@aptos-labs/ts-sdk';
 import { useWallet } from '@aptos-labs/wallet-adapter-react';
+import { trackWalletConnect, identifyUser as gaIdentifyUser } from '@/lib/analytics';
+import { identifyUser as clarityIdentifyUser, trackClarityEvent } from '@/lib/clarity';
 import { WalletModal } from './WalletModal';
 
 type OpenWalletOptions = {
@@ -32,6 +35,20 @@ export function WalletModalProvider({ children }: PropsWithChildren) {
   const { connected, account, network } = useWallet();
   const router = useRouter();
   const pathname = usePathname();
+  const wasConnected = useRef(connected);
+
+  useEffect(() => {
+    if (connected && account && !wasConnected.current) {
+      const address = account.address.toString();
+      trackWalletConnect(address);
+      gaIdentifyUser(address);
+      clarityIdentifyUser(address);
+      trackClarityEvent('wallet_connected');
+    } else if (!connected && wasConnected.current) {
+      trackClarityEvent('wallet_disconnected');
+    }
+    wasConnected.current = connected;
+  }, [connected, account]);
 
   const openWalletModal = useCallback((options?: OpenWalletOptions) => {
     setRedirectOnConnect(Boolean(options?.redirectOnConnect));

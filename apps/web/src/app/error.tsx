@@ -1,22 +1,31 @@
 'use client';
 
+import { useEffect } from 'react';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
+import { trackEvent } from '@/lib/analytics';
 
-export default function Error({
+export default function ErrorPage({
   error,
   reset,
 }: {
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  useEffect(() => {
+    trackEvent('frontend_error', {
+      page: window.location.pathname,
+      error_message: error.message.slice(0, 500),
+    });
+  }, [error]);
+
   return (
-    <div className="mx-auto flex min-h-[60vh] max-w-lg flex-col items-center justify-center text-center">
-      <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-lg border border-red-500/30 bg-red-500/10 text-red-300">
+    <div className="flex min-h-48 flex-col items-center justify-center px-6 py-12 text-center">
+      <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-lg border border-red-500/30 bg-red-500/10 text-red-300">
         <AlertTriangle className="h-5 w-5" />
       </div>
-      <h1 className="text-xl font-semibold text-white">CryptoDrive could not load</h1>
-      <p className="mt-3 text-sm leading-6 text-zinc-400">
-        {error.message || 'A route chunk or client component failed while rendering.'}
+      <h2 className="text-lg font-semibold text-white">Something went wrong</h2>
+      <p className="mt-2 max-w-md text-sm text-zinc-400">
+        {error.message || 'An unexpected error occurred on this page.'}
       </p>
       {error.digest ? (
         <p className="mt-2 font-mono text-xs text-zinc-600">Digest: {error.digest}</p>

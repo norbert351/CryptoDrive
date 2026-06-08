@@ -15,6 +15,9 @@ import {
   ShieldCheck,
   Wallet,
 } from 'lucide-react';
+import { useEffect } from 'react';
+import { trackEvent } from '@/lib/analytics';
+import { trackClarityEvent } from '@/lib/clarity';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { useWalletModal } from '@/components/WalletModalProvider';
 import { cn } from '@/lib/utils';
@@ -91,6 +94,11 @@ function SettingsContent() {
   const { openWalletModal } = useWalletModal();
   const address = account?.address.toString();
   const isTestnet = network?.name === Network.TESTNET;
+
+  useEffect(() => {
+    trackEvent('settings_opened');
+    trackClarityEvent('settings_opened');
+  }, []);
 
   return (
     <motion.div

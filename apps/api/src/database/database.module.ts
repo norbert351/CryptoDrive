@@ -56,12 +56,14 @@ function parseDatabaseUrl(databaseUrl: string): URL {
           import('drizzle-orm/mysql2'),
         ]);
 
+        const maskedUrl = databaseUrl.replace(
+          /:\/\/.+?:.+?@/,
+          '://***:***@',
+        );
+        Logger.log(`DATABASE_URL: ${maskedUrl}`);
         Logger.log(`DB Host: ${host}`);
         Logger.log(`DB User: ${user}`);
         Logger.log(`DB Database: ${database}`);
-        Logger.log(
-          `Password Present: ${password !== undefined ? 'YES' : 'NO'}`,
-        );
 
         try {
           const pool: Pool = createPool({
@@ -72,6 +74,7 @@ function parseDatabaseUrl(databaseUrl: string): URL {
             database,
             waitForConnections: true,
             connectionLimit: 10,
+            connectTimeout: 10000,
           });
 
           await pool.query('SELECT 1');

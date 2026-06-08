@@ -13,6 +13,8 @@ import {
   clearWrapKeyCache,
 } from '@/lib/crypto';
 
+import { trackDownload, trackEvent } from '@/lib/analytics';
+import { trackClarityEvent } from '@/lib/clarity';
 import { EmptyState } from '@/components/EmptyState';
 import { DashboardStats } from '@/components/DashboardStats';
 import { FileGrid } from '@/components/FileGrid';
@@ -36,6 +38,11 @@ import { cn } from '@/lib/utils';
 export default function DashboardPage() {
   const wallet = useWallet();
   const { connected, account } = wallet;
+
+  useEffect(() => {
+    trackEvent('dashboard_opened');
+    trackClarityEvent('dashboard_opened');
+  }, []);
 
   const [files, setFiles] = useState<FileRow[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -147,6 +154,9 @@ export default function DashboardPage() {
       return;
     }
 
+    trackDownload(f.filename);
+    trackClarityEvent('download_started');
+
     setDownloading(f.id);
     setDownloadProgress('checking-access');
     setError(null);
@@ -199,6 +209,7 @@ export default function DashboardPage() {
       a.remove();
       URL.revokeObjectURL(url);
 
+      trackClarityEvent('download_completed');
       setDownloadProgress('completed');
       setTimeout(() => {
         setDownloadProgress(null);

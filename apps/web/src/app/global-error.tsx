@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect } from 'react';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
 
 export default function GlobalError({
@@ -9,6 +10,19 @@ export default function GlobalError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  useEffect(() => {
+    if (typeof window !== 'undefined' && 'gtag' in window) {
+      try {
+        const gtag = (window as unknown as { gtag: (...args: unknown[]) => void }).gtag;
+        gtag('event', 'frontend_error', {
+          page: window.location.pathname,
+          error_message: error.message.slice(0, 500),
+        });
+      } catch {
+        // gtag not available at global level
+      }
+    }
+  }, [error]);
   return (
     <html lang="en">
       <body className="min-h-screen bg-[#030712] text-zinc-100 antialiased">

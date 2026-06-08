@@ -7,6 +7,8 @@ import type { InputTransactionData } from '@aptos-labs/wallet-adapter-core';
 import { useWallet } from '@aptos-labs/wallet-adapter-react';
 import { apiFetch, getAccessToken, setAccessToken } from '@/lib/api';
 import { loginWithWallet } from '@/lib/auth-wallet';
+import { trackUpload } from '@/lib/analytics';
+import { trackClarityEvent } from '@/lib/clarity';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import {
   deriveWrapKeyFromWallet,
@@ -135,6 +137,7 @@ function UploadContent() {
       return;
     }
 
+    trackClarityEvent('upload_started');
     setMessage(null);
     setPhaseDetail('Checking wallet session.');
     setPhase('auth');
@@ -254,6 +257,10 @@ function UploadContent() {
         }),
       });
 
+      if (file) {
+        trackUpload(file.name, file.size);
+        trackClarityEvent('upload_completed');
+      }
       setProgress(100);
       setPhase('done');
       setPhaseDetail('Upload complete.');

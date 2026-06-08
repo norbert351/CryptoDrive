@@ -12,6 +12,7 @@ import { ShelbyModule } from './shelby/shelby.module';
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
+      ignoreEnvFile: process.env.NODE_ENV === 'production',
       envFilePath: [
         join(process.cwd(), 'apps/api/.env'),
         join(process.cwd(), '.env'),
