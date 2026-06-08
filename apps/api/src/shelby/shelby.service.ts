@@ -22,6 +22,15 @@ export class ShelbyService implements OnModuleInit {
     this.logger.log(
       `SHELBY_API_KEY ConfigService loaded=${configKey ? 'yes' : 'no'} prefix=${maskKeyPrefix(configKey)}`,
     );
+
+    const endpointOverride = this.config.get<string>('SHELBY_RPC_URL');
+    this.logger.log(
+      `SHELBY_RPC_URL=${endpointOverride ?? '(not set — using SDK default: https://api.testnet.shelby.xyz/shelby)'}`,
+    );
+    this.logger.log(
+      `SHELBY_NETWORK=${this.config.get<string>('SHELBY_NETWORK') ?? '(not set — using SDK default: testnet)'}`,
+    );
+    this.logger.log(`NODE_ENV=${process.env.NODE_ENV ?? '(not set)'}`);
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -37,6 +46,31 @@ export class ShelbyService implements OnModuleInit {
       this.logger.log('Shelby SDK node module loaded');
     }
     return this.shelbyMod;
+  }
+
+  getApiKey(): string {
+    return this.config.get<string>('SHELBY_API_KEY')?.trim() ?? '';
+  }
+
+  getConfigDiagnostics(): {
+    apiKeyLoaded: boolean;
+    apiKeyPrefix: string;
+    network: string;
+    nodeEnv: string;
+    envSources: Record<string, boolean>;
+  } {
+    const procKey = process.env.SHELBY_API_KEY?.trim();
+    const cfgKey = this.config.get<string>('SHELBY_API_KEY')?.trim();
+    return {
+      apiKeyLoaded: Boolean(cfgKey),
+      apiKeyPrefix: maskKeyPrefix(cfgKey),
+      network: 'testnet',
+      nodeEnv: process.env.NODE_ENV ?? 'not-set',
+      envSources: {
+        processEnv: Boolean(procKey),
+        configService: Boolean(cfgKey),
+      },
+    };
   }
 
   network(): typeof Network.TESTNET {

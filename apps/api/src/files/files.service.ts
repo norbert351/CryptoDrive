@@ -290,10 +290,11 @@ export class FilesService {
     const abs = rec.diskPath;
     const account = AccountAddress.fromString(args.walletAddress);
 
+    const shelbyRpcUrl = (client.rpc as { baseUrl?: string }).baseUrl ?? 'unknown';
     try {
       await putBlobWithRetry(async (attempt) => {
         logger.log(
-          `[${args.sessionId}] finalize upload: before stream creation attempt=${attempt} bytes=${rec.size}`,
+          `[${args.sessionId}] finalize upload: before stream creation attempt=${attempt} bytes=${rec.size} shelbyRpcUrl=${shelbyRpcUrl}`,
         );
         const stream = createReadStream(abs);
         stream.once('open', () => {
@@ -323,43 +324,66 @@ export class FilesService {
         );
 
         logger.log(
-          `[${args.sessionId}] finalize upload: before putBlob attempt=${attempt} blobName="${rec.blobName}" totalBytes=${rec.size}`,
+          `[${args.sessionId}] finalize upload: before putBlob attempt=${attempt} blobName="${rec.blobName}" totalBytes=${rec.size} rpcUrl=${shelbyRpcUrl}`,
         );
-        await withTimeout(
-          'Shelby putBlob',
-          client.rpc.putBlob({
-            account,
-            blobName: rec.blobName,
-            blobData: web,
-            totalBytes: rec.size,
-            onProgress: (progress: {
-              phase: string;
-              partIdx: number;
-              totalParts: number;
-              uploadedBytes: number;
-              totalBytes: number;
-            }) => {
-              logger.log(
-                `[${args.sessionId}] putBlob progress phase=${progress.phase} part=${progress.partIdx + 1}/${progress.totalParts} uploaded=${progress.uploadedBytes}/${progress.totalBytes}`,
+        try {
+          await withTimeout(
+            'Shelby putBlob',
+            client.rpc.putBlob({
+              account,
+              blobName: rec.blobName,
+              blobData: web,
+              totalBytes: rec.size,
+              onProgress: (progress: {
+                phase: string;
+                partIdx: number;
+                totalParts: number;
+                uploadedBytes: number;
+                totalBytes: number;
+              }) => {
+                logger.log(
+                  `[${args.sessionId}] putBlob progress phase=${progress.phase} part=${progress.partIdx + 1}/${progress.totalParts} uploaded=${progress.uploadedBytes}/${progress.totalBytes}`,
+                );
+              },
+            }),
+            UPLOAD_STEP_TIMEOUT_MS,
+            () => {
+              logger.error(
+                `[${args.sessionId}] finalize upload: putBlob timed out, destroying stream attempt=${attempt}`,
               );
+              stream.destroy(new Error('Shelby putBlob timed out'));
             },
-          }),
-          UPLOAD_STEP_TIMEOUT_MS,
-          () => {
-            logger.error(
-              `[${args.sessionId}] finalize upload: putBlob timed out, destroying stream attempt=${attempt}`,
-            );
-            stream.destroy(new Error('Shelby putBlob timed out'));
-          },
-        );
+          );
+        } catch (putBlobError) {
+          const msg = collectErrorMessages(putBlobError);
+          const isMultipartComplete = msg.includes('Failed to complete multipart upload');
+          logger.error(
+            `[${args.sessionId}] finalize upload: putBlob failed attempt=${attempt} ` +
+              `error="${msg}" ` +
+              `isCompletionFailure=${isMultipartComplete} ` +
+              `blobName="${rec.blobName}" ` +
+              `totalBytes=${rec.size} ` +
+              `rpcUrl=${shelbyRpcUrl} ` +
+              `apiKeyPrefix=${(this.config.get<string>('SHELBY_API_KEY') ?? '').slice(0, 6)}...`,
+          );
+          throw putBlobError;
+        }
         logger.log(
           `[${args.sessionId}] finalize upload: after putBlob attempt=${attempt}`,
         );
       });
     } catch (error) {
+      const errorMsg = collectErrorMessages(error);
+      logger.error(
+        `[${args.sessionId}] finalize upload: putBlobWithRetry exhausted all attempts. ` +
+          `blobName="${rec.blobName}" ` +
+          `totalBytes=${rec.size} ` +
+          `rpcUrl=${shelbyRpcUrl} ` +
+          `error="${errorMsg}"`,
+      );
       if (isShelbyAuthError(error)) {
         logger.error(
-          `Shelby API authentication failed during putBlob: ${collectErrorMessages(error)}`,
+          `Shelby API authentication failed during putBlob: ${errorMsg}`,
         );
         throw new UnauthorizedException({
           message: 'Shelby API authentication failed',
@@ -367,7 +391,7 @@ export class FilesService {
       }
       if (isUploadTimeoutError(error)) {
         logger.error(
-          `[${args.sessionId}] Shelby upload timed out during ${error.step}: ${collectErrorMessages(error)}`,
+          `[${args.sessionId}] Shelby upload timed out during ${error.step}: ${errorMsg}`,
         );
         throw new RequestTimeoutException({
           message: 'Shelby upload timed out after 60 seconds',
