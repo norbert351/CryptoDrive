@@ -1,10 +1,10 @@
 'use client';
 
-import { useEffect, useRef, type PropsWithChildren } from 'react';
+import { Suspense, useEffect, useRef, type PropsWithChildren } from 'react';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { trackPageView } from '@/lib/analytics';
 
-export function AnalyticsProvider({ children }: PropsWithChildren) {
+function AnalyticsPageView() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const initialised = useRef(false);
@@ -20,5 +20,14 @@ export function AnalyticsProvider({ children }: PropsWithChildren) {
     trackPageView(url);
   }, [url]);
 
-  return <>{children}</>;
+  return null;
+}
+
+export function AnalyticsProvider({ children }: PropsWithChildren) {
+  return (
+    <Suspense fallback={null}>
+      <AnalyticsPageView />
+      {children}
+    </Suspense>
+  );
 }
