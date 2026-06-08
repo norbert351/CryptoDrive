@@ -1,0 +1,42 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: #030712;
+    --foreground: #f8fafc;
+    --primary: #16a34a;
+    --primary-foreground: #ffffff;
+    --card: #111827;
+    --card-foreground: #f8fafc;
+    --border: #1f2937;
+    --input: #1f2937;
+    --ring: #16a34a;
+    --radius: 1rem;
+  }
+}
+
+@layer base {
+  body {
+    @apply bg-[#030712] text-zinc-100 antialiased selection:bg-emerald-500/30;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+  .glass {
+    @apply bg-zinc-900/40 backdrop-blur-md border border-zinc-800/50 shadow-xl shadow-black/50;
+  }
+  .glass-card {
+    @apply bg-zinc-900/60 backdrop-blur-xl border border-zinc-800 hover:border-zinc-700 transition-colors shadow-lg shadow-black/40;
+  }
+  .text-glow {
+    text-shadow: 0 0 20px rgba(22, 163, 74, 0.5);
+  }
+  .bg-glow {
+    box-shadow: 0 0 40px rgba(22, 163, 74, 0.15);
+  }
+}
