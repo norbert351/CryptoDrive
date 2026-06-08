@@ -11,5 +11,8 @@
     "generate": "npm run generate --prefix apps/api",
     "migrate": "npm run migrate --prefix apps/api",
     "studio": "npm run studio --prefix apps/api"
+  },
+  "devDependencies": {
+    "typescript": "^6.0.3"
   }
 }
