@@ -1,6 +1,6 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { Network } from '@aptos-labs/ts-sdk';
+import { AccountAddress, Network } from '@aptos-labs/ts-sdk';
 
 @Injectable()
 export class ShelbyService implements OnModuleInit {
@@ -112,6 +112,19 @@ export class ShelbyService implements OnModuleInit {
   async expectedTotalChunksets(rawSize: number): Promise<number> {
     const m = await this.mod();
     return m.expectedTotalChunksets(rawSize);
+  }
+
+  async getBlob(account: string, blobName: string) {
+    const client = await this.createShelbyClient();
+    this.logger.log(`getBlob: calling Shelby RPC account=${account} blobName="${blobName}"`);
+    const result = await client.rpc.getBlob({
+      account: AccountAddress.fromString(account),
+      blobName,
+    });
+    this.logger.log(
+      `getBlob: Shelby returned contentLength=${result.contentLength} account=${result.account} name="${result.name}"`,
+    );
+    return result;
   }
 }
 

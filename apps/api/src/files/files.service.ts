@@ -3,6 +3,7 @@ import {
   ForbiddenException,
   Inject,
   Injectable,
+  InternalServerErrorException,
   Logger,
   NotFoundException,
   RequestTimeoutException,
@@ -443,48 +444,7 @@ export class FilesService {
   }
 
   async getDownloadInfo(walletAddress: string, fileId: string) {
-    logger.log(`getDownloadInfo: looking up file id=${fileId} wallet=${walletAddress}`);
-
-    const [row] = await this.db
-      .select()
-      .from(schema.files)
-      .where(eq(schema.files.id, fileId));
-
-    if (!row) {
-      logger.warn(`getDownloadInfo: file NOT FOUND in DB id=${fileId}`);
-      throw new NotFoundException('File not found');
-    }
-
-    logger.log(`getDownloadInfo: file FOUND id=${fileId} filename="${row.filename}" owner=${row.ownerAddress}`);
-
-    const isOwner = row.ownerAddress === walletAddress;
-
-    if (!isOwner) {
-      logger.log(`getDownloadInfo: wallet is NOT owner, checking shared access wallet=${walletAddress}`);
-      const [share] = await this.db
-        .select()
-        .from(schema.sharedFiles)
-        .where(
-          and(
-            eq(schema.sharedFiles.fileId, fileId),
-            eq(schema.sharedFiles.sharedWith, walletAddress),
-            isNull(schema.sharedFiles.revokedAt),
-            or(
-              isNull(schema.sharedFiles.expiresAt),
-              gt(schema.sharedFiles.expiresAt, new Date()),
-            ),
-          ),
-        );
-      if (!share) {
-        logger.warn(`getDownloadInfo: no active share found wallet=${walletAddress} fileId=${fileId}`);
-        throw new ForbiddenException(
-          'You do not have access to this file',
-        );
-      }
-      logger.log(`getDownloadInfo: active share FOUND wallet=${walletAddress} fileId=${fileId}`);
-    } else {
-      logger.log(`getDownloadInfo: wallet IS owner, skipping share check`);
-    }
+    const row = await this.verifyFileAccess(walletAddress, fileId);
 
     const apiBase = 'https://api.testnet.shelby.xyz';
     const shelbyUrl = `${apiBase}/shelby/v1/blobs/${row.ownerAddress}/${row.blobName}`;
@@ -504,5 +464,85 @@ export class FilesService {
           }
         : null,
     };
+  }
+
+  async streamFile(walletAddress: string, fileId: string) {
+    logger.log(`streamFile: looking up file id=${fileId} wallet=${walletAddress}`);
+    const row = await this.verifyFileAccess(walletAddress, fileId);
+
+    logger.log(`streamFile: access verified id=${fileId} blobName="${row.blobName}" filename="${row.filename}" size=${row.size}`);
+
+    try {
+      logger.log(`streamFile: calling Shelby getBlob account=${row.ownerAddress} blobName="${row.blobName}"`);
+      const shelbyResult = await this.shelby.getBlob(row.ownerAddress, row.blobName);
+
+      logger.log(
+        `streamFile: Shelby getBlob succeeded contentLength=${shelbyResult.contentLength} account=${shelbyResult.account} name="${shelbyResult.name}"`,
+      );
+
+      return {
+        stream: shelbyResult.readable,
+        contentLength: shelbyResult.contentLength,
+        fileName: row.filename,
+        mimeType: row.mimeType ?? 'application/octet-stream',
+      };
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error);
+      logger.error(
+        `streamFile: Shelby getBlob FAILED id=${fileId} blobName="${row.blobName}" error="${msg}"`,
+        error instanceof Error ? error.stack : undefined,
+      );
+      throw new InternalServerErrorException({
+        message: 'Failed to download file from storage',
+        detail: msg,
+      });
+    }
+  }
+
+  async verifyFileAccess(walletAddress: string, fileId: string) {
+    logger.log(`verifyFileAccess: looking up file id=${fileId} wallet=${walletAddress}`);
+
+    const [row] = await this.db
+      .select()
+      .from(schema.files)
+      .where(eq(schema.files.id, fileId));
+
+    if (!row) {
+      logger.warn(`verifyFileAccess: file NOT FOUND in DB id=${fileId}`);
+      throw new NotFoundException('File not found');
+    }
+
+    logger.log(`verifyFileAccess: file FOUND id=${fileId} filename="${row.filename}" blobName="${row.blobName}" owner=${row.ownerAddress} size=${row.size}`);
+
+    const isOwner = row.ownerAddress === walletAddress;
+
+    if (!isOwner) {
+      logger.log(`verifyFileAccess: wallet is NOT owner, checking shared access wallet=${walletAddress}`);
+      const [share] = await this.db
+        .select()
+        .from(schema.sharedFiles)
+        .where(
+          and(
+            eq(schema.sharedFiles.fileId, fileId),
+            eq(schema.sharedFiles.sharedWith, walletAddress),
+            isNull(schema.sharedFiles.revokedAt),
+            or(
+              isNull(schema.sharedFiles.expiresAt),
+              gt(schema.sharedFiles.expiresAt, new Date()),
+            ),
+          ),
+        );
+      if (!share) {
+        logger.warn(`verifyFileAccess: no active share found wallet=${walletAddress} fileId=${fileId}`);
+        throw new ForbiddenException(
+          'You do not have access to this file',
+        );
+      }
+      logger.log(`verifyFileAccess: active share FOUND wallet=${walletAddress} fileId=${fileId}`);
+    } else {
+      logger.log(`verifyFileAccess: wallet IS owner, skipping share check`);
+    }
+
+    return row;
   }
 }
