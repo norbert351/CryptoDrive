@@ -32,9 +32,7 @@ function parseDatabaseUrl(databaseUrl: string): URL {
         const databaseUrl = config.get<string>('DATABASE_URL')?.trim();
         if (!databaseUrl) {
           logger.error('DATABASE_URL is not configured');
-          throw new Error(
-            'DATABASE_URL is missing. Check apps/api/.env',
-          );
+          throw new Error('DATABASE_URL is missing. Check apps/api/.env');
         }
 
         const parsedUrl = parseDatabaseUrl(databaseUrl);
@@ -56,10 +54,7 @@ function parseDatabaseUrl(databaseUrl: string): URL {
           import('drizzle-orm/mysql2'),
         ]);
 
-        const maskedUrl = databaseUrl.replace(
-          /:\/\/.+?:.+?@/,
-          '://***:***@',
-        );
+        const maskedUrl = databaseUrl.replace(/:\/\/.+?:.+?@/, '://***:***@');
         Logger.log(`DATABASE_URL: ${maskedUrl}`);
         Logger.log(`DB Host: ${host}`);
         Logger.log(`DB User: ${user}`);
@@ -75,6 +70,9 @@ function parseDatabaseUrl(databaseUrl: string): URL {
             waitForConnections: true,
             connectionLimit: 10,
             connectTimeout: 10000,
+            ssl: {
+              rejectUnauthorized: true,
+            },
           });
 
           await pool.query('SELECT 1');
