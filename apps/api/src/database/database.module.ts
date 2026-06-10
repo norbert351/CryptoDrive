@@ -71,7 +71,8 @@ function parseDatabaseUrl(databaseUrl: string): URL {
             connectionLimit: 10,
             connectTimeout: 10000,
             ssl: {
-              rejectUnauthorized: true,
+              minVersion: 'TLSv1.2',
+              rejectUnauthorized: false,
             },
           });
 
